@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import Navigation from '@/components/Navigation';
 import ImageUploader from '@/components/ImageUploader';
 import ImageAnalysis from '@/components/ImageAnalysis';
 import { Button } from '@/components/ui/button';
@@ -122,7 +123,9 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-secondary/50">
-      <header className="container py-8 md:py-12">
+      <Navigation />
+      
+      <header className="container py-8 md:py-12 mt-16">
         <div className="flex flex-col items-center text-center space-y-2">
           <div className="inline-block p-2 bg-primary/10 rounded-full mb-2">
             <Sparkles className="h-8 w-8 text-primary" strokeWidth={1.5} />
