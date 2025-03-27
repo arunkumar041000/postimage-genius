@@ -1,0 +1,61 @@
+
+import React from 'react';
+import { cn } from '@/lib/utils';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { CheckCircle2, AlertCircle, Lightbulb } from 'lucide-react';
+
+export interface Recommendation {
+  id: string;
+  type: 'positive' | 'improvement' | 'suggestion';
+  title: string;
+  description: string;
+}
+
+interface RecommendationCardProps {
+  recommendation: Recommendation;
+  className?: string;
+}
+
+const RecommendationCard: React.FC<RecommendationCardProps> = ({ 
+  recommendation,
+  className 
+}) => {
+  const { type, title, description } = recommendation;
+  
+  const iconMap = {
+    positive: <CheckCircle2 className="h-5 w-5 text-green-500" />,
+    improvement: <AlertCircle className="h-5 w-5 text-amber-500" />,
+    suggestion: <Lightbulb className="h-5 w-5 text-brand" />
+  };
+  
+  const backgroundMap = {
+    positive: 'bg-green-50 border-green-100',
+    improvement: 'bg-amber-50 border-amber-100',
+    suggestion: 'bg-blue-50 border-blue-100'
+  };
+
+  return (
+    <Card 
+      className={cn(
+        'transform transition-all duration-300 ease-in-out', 
+        'hover:shadow-elevated hover:-translate-y-1',
+        backgroundMap[type],
+        className
+      )}
+    >
+      <CardHeader className="pb-2">
+        <div className="flex items-center gap-2">
+          {iconMap[type]}
+          <CardTitle className="text-base font-medium">{title}</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <CardDescription className="text-foreground/80 text-sm">
+          {description}
+        </CardDescription>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default RecommendationCard;
