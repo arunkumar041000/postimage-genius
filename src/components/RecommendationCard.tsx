@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,7 +14,15 @@ interface RecommendationCardProps {
   recommendation: Recommendation;
   className?: string;
 }
-
+const parseBoldText = (text: string) => {
+  return text.split(/(\*\*.*?\*\*)/).map((part, index) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={index}>{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
+};
+ 
 const RecommendationCard: React.FC<RecommendationCardProps> = ({ 
   recommendation,
   className 
@@ -51,7 +58,7 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({
       </CardHeader>
       <CardContent>
         <CardDescription className="text-foreground/80 text-sm">
-          {description}
+          {parseBoldText(description)}
         </CardDescription>
       </CardContent>
     </Card>
