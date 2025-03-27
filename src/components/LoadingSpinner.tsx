@@ -21,7 +21,7 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
     <div className="flex items-center justify-center">
       <div
         className={cn(
-          'rounded-full border-t-transparent border-primary animate-spin-slow',
+          'rounded-full border-t-transparent border-primary animate-spin',
           sizeClasses[size],
           className
         )}

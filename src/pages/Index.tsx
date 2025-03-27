@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import ImageUploader from '@/components/ImageUploader';
 import ImageAnalysis from '@/components/ImageAnalysis';
@@ -12,6 +12,8 @@ import { analyzeMarketingImage, AnalysisResult } from '@/lib/openai';
 import { Recommendation } from '@/components/RecommendationCard';
 import { ArrowRight, Lock, Sparkles } from 'lucide-react';
 
+const STORAGE_KEY = 'marketing_analyzer_api_key';
+
 const Index = () => {
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [apiKey, setApiKey] = useState<string>('');
@@ -19,6 +21,14 @@ const Index = () => {
   const [error, setError] = useState<string | null>(null);
   const [recommendations, setRecommendations] = useState<Recommendation[] | null>(null);
   const [activeTab, setActiveTab] = useState<string>('upload');
+
+  // Load API key from localStorage on component mount
+  useEffect(() => {
+    const savedApiKey = localStorage.getItem(STORAGE_KEY);
+    if (savedApiKey) {
+      setApiKey(savedApiKey);
+    }
+  }, []);
 
   const handleImageUpload = (file: File) => {
     setUploadedImage(file);
@@ -28,6 +38,13 @@ const Index = () => {
     if (!recommendations && activeTab === 'upload') {
       setActiveTab('apikey');
     }
+  };
+
+  const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newApiKey = e.target.value;
+    setApiKey(newApiKey);
+    // Save to localStorage whenever it changes
+    localStorage.setItem(STORAGE_KEY, newApiKey);
   };
 
   const handleAnalyzeImage = async () => {
@@ -158,7 +175,7 @@ const Index = () => {
                         <h3 className="text-lg font-medium">Your OpenAI API Key</h3>
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        Enter your OpenAI API key to analyze the image. Your key stays in your browser and is never stored on our servers.
+                        Enter your OpenAI API key to analyze the image. Your key is securely stored in your browser and never sent to our servers.
                       </p>
                     </div>
                     
@@ -166,7 +183,7 @@ const Index = () => {
                       type="password"
                       placeholder="sk-..."
                       value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
+                      onChange={handleApiKeyChange}
                       className="font-mono"
                     />
                     
