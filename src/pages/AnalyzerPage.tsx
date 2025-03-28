@@ -14,7 +14,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SidebarProvider, Sidebar, SidebarTrigger } from '@/components/ui/sidebar';
 import { resizeImageIfNeeded } from '@/lib/imageProcessor';
-import { analyzeMarketingImage, AnalysisResult } from '@/lib/openai';
+import { analyzeMarketingImage } from '@/lib/openai';
+import { AnalysisResult } from '@/types/analysis';
 import { Recommendation } from '@/components/RecommendationCard';
 import { ArrowRight, Lock, Sparkles, MessageSquare } from 'lucide-react';
 
@@ -148,7 +149,7 @@ const AnalyzerPage = () => {
           user_id: currentUser.uid,
           image_url: imageUrl,
           prompt: promptText || null,
-          result: result
+          result: result as any // Cast to any to avoid TypeScript error
         })
         .select();
       
@@ -201,7 +202,9 @@ const AnalyzerPage = () => {
         
         // Convert result to recommendations format
         if (data.result) {
-          const newRecommendations = convertToRecommendations(data.result as AnalysisResult);
+          // Cast the result to AnalysisResult with type assertion
+          const analysisResult = data.result as unknown as AnalysisResult;
+          const newRecommendations = convertToRecommendations(analysisResult);
           setRecommendations(newRecommendations);
         }
         
