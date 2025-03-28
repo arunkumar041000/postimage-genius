@@ -9,7 +9,7 @@ export type SocialMediaPlatform = 'facebook' | 'instagram' | 'twitter';
 interface SocialMediaBadgeProps {
   platform: SocialMediaPlatform;
   isSelected: boolean;
-  onClick: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 const platformIcons = {
@@ -35,6 +35,7 @@ const SocialMediaBadge: React.FC<SocialMediaBadgeProps> = ({
       className={cn(
         "cursor-pointer transition-all duration-200 flex items-center px-3 py-1.5",
         isSelected ? "bg-primary hover:bg-primary/90" : "hover:bg-secondary",
+        "shadow-elevated",
         "text-sm font-medium"
       )}
       onClick={onClick}
