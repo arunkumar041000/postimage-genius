@@ -36,12 +36,15 @@ const Login = () => {
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
     try {
-      await login(data.email, data.password);
+      const { error } = await login(data.email, data.password);
+      
+      if (error) throw error;
+      
       toast.success("Logged in successfully");
       navigate("/analyzer");
     } catch (error) {
       console.error("Login error:", error);
-      toast.error("Failed to log in. Please check your credentials.");
+      toast.error(error instanceof Error ? error.message : "Failed to log in. Please check your credentials.");
     } finally {
       setIsLoading(false);
     }

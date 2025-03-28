@@ -48,7 +48,7 @@ const Navigation = () => {
           {currentUser ? (
             <>
               <span className="text-sm mr-2 hidden md:inline-block">
-                {currentUser.displayName}
+                {currentUser.email}
               </span>
               <Button variant="ghost" size="sm" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-1" />

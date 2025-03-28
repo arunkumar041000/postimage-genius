@@ -41,12 +41,15 @@ const Signup = () => {
   const onSubmit = async (data: SignupFormValues) => {
     setIsLoading(true);
     try {
-      await signup(data.email, data.password);
+      const { error } = await signup(data.email, data.password);
+      
+      if (error) throw error;
+      
       toast.success("Account created successfully");
       navigate("/analyzer");
     } catch (error) {
       console.error("Signup error:", error);
-      toast.error("Failed to create account. Please try again.");
+      toast.error(error instanceof Error ? error.message : "Failed to create account. Please try again.");
     } finally {
       setIsLoading(false);
     }

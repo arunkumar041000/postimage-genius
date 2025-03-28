@@ -1,20 +1,14 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { 
-  User, 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword, 
-  signOut, 
-  onAuthStateChanged,
-  UserCredential
-} from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
+import { User, Session } from "@supabase/supabase-js";
 
 // Define the auth context type
 type AuthContextType = {
   currentUser: User | null;
-  login: (email: string, password: string) => Promise<UserCredential>;
-  signup: (email: string, password: string) => Promise<UserCredential>;
+  session: Session | null;
+  login: (email: string, password: string) => Promise<any>;
+  signup: (email: string, password: string) => Promise<any>;
   logout: () => Promise<void>;
   loading: boolean;
 };
@@ -34,35 +28,47 @@ export const useAuth = () => {
 // Auth provider component
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Sign up function
   const signup = (email: string, password: string) => {
-    return createUserWithEmailAndPassword(auth, email, password);
+    return supabase.auth.signUp({ email, password });
   };
 
   // Login function
   const login = (email: string, password: string) => {
-    return signInWithEmailAndPassword(auth, email, password);
+    return supabase.auth.signInWithPassword({ email, password });
   };
 
   // Logout function
-  const logout = () => {
-    return signOut(auth);
+  const logout = async () => {
+    return supabase.auth.signOut();
   };
 
   // Set up auth state listener
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setCurrentUser(session?.user ?? null);
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setCurrentUser(session?.user ?? null);
       setLoading(false);
     });
 
-    return unsubscribe;
+    return () => subscription.unsubscribe();
   }, []);
 
   const value = {
     currentUser,
+    session,
     signup,
     login,
     logout,
