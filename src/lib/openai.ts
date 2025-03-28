@@ -1,4 +1,3 @@
-
 export interface AnalysisResult {
   positives: string[];
   improvements: string[];
@@ -132,7 +131,7 @@ const extractBulletPoints = (text: string): string[] => {
   
   // Split by newlines and clean up
   const lines = trimmed.split('\n')
-    .map(line => line.replace(/^[•\-\*]\s*/, '').trim())
+    .map(line => line.replace(/^[•\-*]\s*/, '').trim())
     .filter(line => line.length > 0);
   
   return lines;

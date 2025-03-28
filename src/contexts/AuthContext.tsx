@@ -1,15 +1,14 @@
-
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { User, Session } from "@supabase/supabase-js";
+import { User, Session, AuthResponse, AuthError } from "@supabase/supabase-js";
 
 // Define the auth context type
 type AuthContextType = {
   currentUser: User | null;
   session: Session | null;
-  login: (email: string, password: string) => Promise<any>;
-  signup: (email: string, password: string) => Promise<any>;
-  logout: () => Promise<void>;
+  login: (email: string, password: string) => Promise<AuthResponse>;
+  signup: (email: string, password: string) => Promise<AuthResponse>;
+  logout: () => Promise<{ error: AuthError }>;
   loading: boolean;
 };
 
