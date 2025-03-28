@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -149,7 +148,7 @@ const AnalyzerPage = () => {
           user_id: currentUser.id,
           image_url: imageUrl,
           prompt: promptText || null,
-          result: result as any // Cast to any to avoid TypeScript error
+          result: result as AnalysisResult
         })
         .select();
       

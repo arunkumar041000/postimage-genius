@@ -1,9 +1,10 @@
 
 import React, { useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
-import { UploadCloud, X, Image as ImageIcon } from 'lucide-react';
+import { UploadCloud, X, Image as ImageIcon, Instagram, Twitter, Facebook } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import SocialMediaBadge, { SocialMediaPlatform } from './SocialMediaBadge';
+import { Badge } from './ui/badge';
 
 interface ImageUploaderProps {
   onImageUpload: (file: File, platforms: SocialMediaPlatform[]) => void;

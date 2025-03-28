@@ -9,7 +9,7 @@ export type SocialMediaPlatform = 'facebook' | 'instagram' | 'twitter';
 interface SocialMediaBadgeProps {
   platform: SocialMediaPlatform;
   isSelected: boolean;
-  onClick: () => void;
+  onClick: (e: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 const platformIcons = {
