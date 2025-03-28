@@ -13,6 +13,7 @@ import { resizeImageIfNeeded } from '@/lib/imageProcessor';
 import { analyzeMarketingImage, AnalysisResult } from '@/lib/openai';
 import { Recommendation } from '@/components/RecommendationCard';
 import { ArrowRight, Lock, Sparkles, MessageSquare } from 'lucide-react';
+import { SocialMediaPlatform } from '@/components/SocialMediaBadge';
 
 const STORAGE_KEY = 'marketing_analyzer_api_key';
 
@@ -24,6 +25,7 @@ const Index = () => {
   const [recommendations, setRecommendations] = useState<Recommendation[] | null>(null);
   const [activeTab, setActiveTab] = useState<string>('upload');
   const [promptText, setPromptText] = useState<string>('');
+  const [selectedPlatforms, setSelectedPlatforms] = useState<SocialMediaPlatform[]>([]);
 
   // Load API key from localStorage on component mount
   useEffect(() => {
@@ -33,8 +35,9 @@ const Index = () => {
     }
   }, []);
 
-  const handleImageUpload = (file: File) => {
+  const handleImageUpload = (file: File, platforms: SocialMediaPlatform[]) => {
     setUploadedImage(file);
+    setSelectedPlatforms(platforms);
     setError(null);
     setRecommendations(null);
     // Switch to API key tab if image is uploaded and we don't have recommendations yet
@@ -72,8 +75,17 @@ const Index = () => {
       // Process and resize image if needed
       const base64Image = await resizeImageIfNeeded(uploadedImage);
       
-      // Analyze with OpenAI, including the prompt if provided
-      const result = await analyzeMarketingImage(base64Image, apiKey, promptText);
+      // Build enhanced prompt with selected platforms
+      let enhancedPrompt = promptText || '';
+      if (selectedPlatforms.length > 0) {
+        const platformsText = selectedPlatforms.join(', ');
+        enhancedPrompt = enhancedPrompt 
+          ? `${enhancedPrompt}\n\nTarget platforms: ${platformsText}`
+          : `Target platforms: ${platformsText}`;
+      }
+      
+      // Analyze with OpenAI
+      const result = await analyzeMarketingImage(base64Image, apiKey, enhancedPrompt);
       
       // Convert to recommendations format
       const newRecommendations = convertToRecommendations(result);
@@ -245,13 +257,22 @@ const Index = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-4">
                     <h3 className="text-lg font-medium">Your Image</h3>
-                    <div className="rounded-lg overflow-hidden border bg-card">
+                    <div className="rounded-lg overflow-hidden border bg-card shadow-sm">
                       <img 
                         src={URL.createObjectURL(uploadedImage)} 
                         alt="Uploaded marketing image" 
-                        className="w-full h-auto object-contain"
+                        className="w-full h-auto max-h-[350px] object-contain"
                       />
                     </div>
+                    
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {selectedPlatforms.map(platform => (
+                        <Badge key={platform} variant="secondary" className="text-xs">
+                          {platform.charAt(0).toUpperCase() + platform.slice(1)}
+                        </Badge>
+                      ))}
+                    </div>
+                    
                     {promptText && (
                       <div className="text-sm text-muted-foreground p-3 bg-muted rounded-lg">
                         <p className="font-medium mb-1">Your context:</p>
@@ -262,11 +283,13 @@ const Index = () => {
                   
                   <div className="space-y-4">
                     <h3 className="text-lg font-medium">Analysis Results</h3>
-                    <ImageAnalysis 
-                      recommendations={recommendations}
-                      isLoading={isAnalyzing}
-                      error={error}
-                    />
+                    <div className="shadow-md">
+                      <ImageAnalysis 
+                        recommendations={recommendations}
+                        isLoading={isAnalyzing}
+                        error={error}
+                      />
+                    </div>
                   </div>
                 </div>
               )}
@@ -284,6 +307,7 @@ const Index = () => {
                     setUploadedImage(null);
                     setRecommendations(null);
                     setPromptText('');
+                    setSelectedPlatforms([]);
                     setActiveTab('upload');
                   }}
                 >

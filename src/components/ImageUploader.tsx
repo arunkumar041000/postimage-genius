@@ -3,9 +3,10 @@ import React, { useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { UploadCloud, X, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import SocialMediaBadge, { SocialMediaPlatform } from './SocialMediaBadge';
 
 interface ImageUploaderProps {
-  onImageUpload: (file: File) => void;
+  onImageUpload: (file: File, platforms: SocialMediaPlatform[]) => void;
   className?: string;
 }
 
@@ -15,6 +16,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<SocialMediaPlatform[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -57,7 +59,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
     reader.readAsDataURL(file);
     
     // Pass the file to parent component
-    onImageUpload(file);
+    onImageUpload(file, selectedPlatforms);
   };
 
   const clearImage = () => {
@@ -65,6 +67,16 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+  const togglePlatform = (platform: SocialMediaPlatform) => {
+    setSelectedPlatforms(prev => {
+      if (prev.includes(platform)) {
+        return prev.filter(p => p !== platform);
+      } else {
+        return [...prev, platform];
+      }
+    });
   };
 
   return (
@@ -116,13 +128,43 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
             onChange={handleFileChange}
             className="hidden"
           />
+
+          <div className="mt-8 border-t pt-6 w-full max-w-md">
+            <p className="text-sm font-medium mb-3 text-center">Select target platforms for better analysis</p>
+            <div className="flex flex-wrap gap-2 justify-center">
+              <SocialMediaBadge 
+                platform="facebook" 
+                isSelected={selectedPlatforms.includes('facebook')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  togglePlatform('facebook');
+                }}
+              />
+              <SocialMediaBadge 
+                platform="instagram" 
+                isSelected={selectedPlatforms.includes('instagram')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  togglePlatform('instagram');
+                }}
+              />
+              <SocialMediaBadge 
+                platform="twitter" 
+                isSelected={selectedPlatforms.includes('twitter')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  togglePlatform('twitter');
+                }}
+              />
+            </div>
+          </div>
         </div>
       ) : (
-        <div className="relative rounded-lg overflow-hidden animate-fade-in">
+        <div className="relative rounded-lg overflow-hidden animate-fade-in shadow-elevated">
           <img 
             src={previewUrl} 
             alt="Preview" 
-            className="w-full h-auto object-contain rounded-lg" 
+            className="w-full max-h-[400px] object-contain rounded-lg" 
           />
           <div className="absolute top-3 right-3">
             <Button
@@ -136,6 +178,20 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
             >
               <X className="h-4 w-4" />
             </Button>
+          </div>
+          
+          <div className="mt-4 flex flex-wrap gap-2">
+            {selectedPlatforms.map(platform => (
+              <Badge key={platform} variant="secondary" className="py-1.5 px-3">
+                {platform === 'facebook' && <Facebook className="h-4 w-4 mr-1" />}
+                {platform === 'instagram' && <Instagram className="h-4 w-4 mr-1" />}
+                {platform === 'twitter' && <Twitter className="h-4 w-4 mr-1" />}
+                {platform.charAt(0).toUpperCase() + platform.slice(1)}
+              </Badge>
+            ))}
+            {selectedPlatforms.length === 0 && (
+              <p className="text-sm text-muted-foreground">No platforms selected</p>
+            )}
           </div>
         </div>
       )}

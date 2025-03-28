@@ -1,3 +1,4 @@
+
 export interface AnalysisResult {
   positives: string[];
   improvements: string[];
@@ -27,6 +28,12 @@ export const analyzeMarketingImage = async (
 
   if (prompt && prompt.trim()) {
     systemContent += `\n\nAdditional context from the user: ${prompt.trim()}`;
+    
+    // Extract platform information if present
+    if (prompt.includes('Target platforms:')) {
+      systemContent += `\n\nPay special attention to optimizing this content for the specified target platforms,
+      including platform-specific best practices, aspect ratios, and content guidelines.`;
+    }
   }
 
   const payload = {
