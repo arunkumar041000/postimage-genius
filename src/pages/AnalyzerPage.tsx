@@ -146,7 +146,7 @@ const AnalyzerPage = () => {
       const { data: historyData, error: historyError } = await supabase
         .from('analysis_history')
         .insert({
-          user_id: currentUser.uid,
+          user_id: currentUser.id,
           image_url: imageUrl,
           prompt: promptText || null,
           result: result as any // Cast to any to avoid TypeScript error
