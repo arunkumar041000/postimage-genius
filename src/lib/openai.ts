@@ -7,7 +7,8 @@ export interface AnalysisResult {
 
 export const analyzeMarketingImage = async (
   imageBase64: string,
-  apiKey: string
+  apiKey: string,
+  prompt?: string
 ): Promise<AnalysisResult> => {
   // Prepare the API request
   const headers = {
@@ -15,26 +16,35 @@ export const analyzeMarketingImage = async (
     'Authorization': `Bearer ${apiKey}`
   };
 
+  // Add the user's prompt to the system message if provided
+  let systemContent = `You are a marketing expert specialized in analyzing marketing images and social media posts. 
+    Provide specific, actionable feedback organized in three categories:
+    1. Positives: What works well in this marketing image
+    2. Improvements: Specific areas that could be improved
+    3. Suggestions: Actionable recommendations to enhance the effectiveness
+    
+    Focus on visual elements, composition, target audience appeal, brand consistency, 
+    messaging clarity, call-to-action effectiveness, and emotional impact.`;
+
+  if (prompt && prompt.trim()) {
+    systemContent += `\n\nAdditional context from the user: ${prompt.trim()}`;
+  }
+
   const payload = {
     model: "gpt-4o",
     messages: [
       {
         role: "system",
-        content: `You are a marketing expert specialized in analyzing marketing images and social media posts. 
-        Provide specific, actionable feedback organized in three categories:
-        1. Positives: What works well in this marketing image
-        2. Improvements: Specific areas that could be improved
-        3. Suggestions: Actionable recommendations to enhance the effectiveness
-        
-        Focus on visual elements, composition, target audience appeal, brand consistency, 
-        messaging clarity, call-to-action effectiveness, and emotional impact.`
+        content: systemContent
       },
       {
         role: "user",
         content: [
           {
             type: "text",
-            text: "Analyze this marketing image and provide feedback on what works well, what could be improved, and specific suggestions."
+            text: prompt && prompt.trim() 
+              ? "Analyze this marketing image with the context I provided." 
+              : "Analyze this marketing image and provide feedback on what works well, what could be improved, and specific suggestions."
           },
           {
             type: "image_url",

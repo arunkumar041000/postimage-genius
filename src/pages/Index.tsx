@@ -6,12 +6,13 @@ import ImageUploader from '@/components/ImageUploader';
 import ImageAnalysis from '@/components/ImageAnalysis';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { resizeImageIfNeeded } from '@/lib/imageProcessor';
 import { analyzeMarketingImage, AnalysisResult } from '@/lib/openai';
 import { Recommendation } from '@/components/RecommendationCard';
-import { ArrowRight, Lock, Sparkles } from 'lucide-react';
+import { ArrowRight, Lock, Sparkles, MessageSquare } from 'lucide-react';
 
 const STORAGE_KEY = 'marketing_analyzer_api_key';
 
@@ -22,6 +23,7 @@ const Index = () => {
   const [error, setError] = useState<string | null>(null);
   const [recommendations, setRecommendations] = useState<Recommendation[] | null>(null);
   const [activeTab, setActiveTab] = useState<string>('upload');
+  const [promptText, setPromptText] = useState<string>('');
 
   // Load API key from localStorage on component mount
   useEffect(() => {
@@ -48,6 +50,10 @@ const Index = () => {
     localStorage.setItem(STORAGE_KEY, newApiKey);
   };
 
+  const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setPromptText(e.target.value);
+  };
+
   const handleAnalyzeImage = async () => {
     if (!uploadedImage) {
       toast.error('Please upload an image first');
@@ -66,8 +72,8 @@ const Index = () => {
       // Process and resize image if needed
       const base64Image = await resizeImageIfNeeded(uploadedImage);
       
-      // Analyze with OpenAI
-      const result = await analyzeMarketingImage(base64Image, apiKey);
+      // Analyze with OpenAI, including the prompt if provided
+      const result = await analyzeMarketingImage(base64Image, apiKey, promptText);
       
       // Convert to recommendations format
       const newRecommendations = convertToRecommendations(result);
@@ -76,6 +82,9 @@ const Index = () => {
       // Switch to results tab
       setActiveTab('results');
       toast.success('Analysis complete!');
+
+      // Ideally, here we would save to Supabase after integration
+      // saveAnalysisToSupabase(uploadedImage, promptText, newRecommendations);
     } catch (err) {
       console.error('Analysis error:', err);
       setError(err instanceof Error ? err.message : 'Failed to analyze image');
@@ -193,6 +202,22 @@ const Index = () => {
                     <div className="text-xs text-muted-foreground">
                       <p>Don't have an API key? <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Get one from OpenAI</a></p>
                     </div>
+
+                    <div className="space-y-2 mt-6 pt-4 border-t">
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                        <h3 className="text-lg font-medium">Add Context (Optional)</h3>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Tell us about your marketing goals, target audience, or specific aspects you want feedback on.
+                      </p>
+                      <Textarea
+                        placeholder="E.g., This is a Facebook ad for our new product targeting young professionals..."
+                        value={promptText}
+                        onChange={handlePromptChange}
+                        className="min-h-[100px]"
+                      />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -227,6 +252,12 @@ const Index = () => {
                         className="w-full h-auto object-contain"
                       />
                     </div>
+                    {promptText && (
+                      <div className="text-sm text-muted-foreground p-3 bg-muted rounded-lg">
+                        <p className="font-medium mb-1">Your context:</p>
+                        <p>{promptText}</p>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="space-y-4">
@@ -252,6 +283,7 @@ const Index = () => {
                   onClick={() => {
                     setUploadedImage(null);
                     setRecommendations(null);
+                    setPromptText('');
                     setActiveTab('upload');
                   }}
                 >
