@@ -3,7 +3,7 @@ import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Sidebar, SidebarContent, SidebarHeader, SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
-import { Clock, Image, Trash2 } from 'lucide-react';
+import { Clock, Image, Trash2, History } from 'lucide-react';
 
 export interface AnalysisHistoryItem {
   id: string;
@@ -34,7 +34,10 @@ const AnalyzerSidebar = ({
     <Sidebar>
       <SidebarHeader>
         <div className="flex justify-between items-center px-2 py-2">
-          <h2 className="text-sm font-semibold">Analysis History</h2>
+          <h2 className="text-sm font-semibold flex items-center gap-2">
+            <History className="h-4 w-4" />
+            Analysis History
+          </h2>
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -44,7 +47,7 @@ const AnalyzerSidebar = ({
             {sortedItems.length > 0 ? (
               <SidebarMenu>
                 {sortedItems.map((item) => (
-                  <SidebarMenuItem key={item.id}>
+                  <SidebarMenuItem key={item.id} className="group">
                     <SidebarMenuButton 
                       isActive={currentItemId === item.id}
                       onClick={() => onSelectItem(item)}
