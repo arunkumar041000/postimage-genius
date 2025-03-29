@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,21 +12,18 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { SidebarProvider, Sidebar, SidebarTrigger } from '@/components/ui/sidebar';
+import { SidebarProvider } from '@/components/ui/sidebar';
 import { resizeImageIfNeeded } from '@/lib/imageProcessor';
-import { analyzeMarketingImage } from '@/lib/openai';
 import { AnalysisResult } from '@/types/analysis';
 import { Recommendation } from '@/components/RecommendationCard';
-import { ArrowRight, Lock, Sparkles, MessageSquare } from 'lucide-react';
+import { ArrowRight, Sparkles, MessageSquare } from 'lucide-react';
 import { SocialMediaPlatform } from '@/components/SocialMediaBadge';
 
-const STORAGE_KEY = 'marketing_analyzer_api_key';
-
+// Remove the STORAGE_KEY constant as we no longer need to store the API key
 const AnalyzerPage = () => {
   const { currentUser } = useAuth();
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [platforms, setPlatforms] = useState<SocialMediaPlatform[]>([]);
-  const [apiKey, setApiKey] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [recommendations, setRecommendations] = useState<Recommendation[] | null>(null);
@@ -34,14 +32,6 @@ const AnalyzerPage = () => {
   const [historyItems, setHistoryItems] = useState<AnalysisHistoryItem[]>([]);
   const [currentHistoryItemId, setCurrentHistoryItemId] = useState<string | undefined>(undefined);
   const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(false);
-
-  // Load API key from localStorage on component mount
-  useEffect(() => {
-    const savedApiKey = localStorage.getItem(STORAGE_KEY);
-    if (savedApiKey) {
-      setApiKey(savedApiKey);
-    }
-  }, []);
 
   // Load history from Supabase when user is authenticated
   useEffect(() => {
@@ -88,13 +78,6 @@ const AnalyzerPage = () => {
     setCurrentHistoryItemId(undefined);
   };
 
-  const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newApiKey = e.target.value;
-    setApiKey(newApiKey);
-    // Save to localStorage whenever it changes
-    localStorage.setItem(STORAGE_KEY, newApiKey);
-  };
-
   const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setPromptText(e.target.value);
   };
@@ -102,11 +85,6 @@ const AnalyzerPage = () => {
   const handleAnalyzeImage = async () => {
     if (!uploadedImage) {
       toast.error('Please upload an image first');
-      return;
-    }
-
-    if (!apiKey || apiKey.trim() === '') {
-      toast.error('Please enter your OpenAI API key');
       return;
     }
 
@@ -135,13 +113,25 @@ const AnalyzerPage = () => {
         .from('analysis_images')
         .getPublicUrl(fileName).data.publicUrl;
       
-      // Process and resize image if needed for OpenAI analysis
+      // Process and resize image if needed for analysis
       const base64Image = await resizeImageIfNeeded(uploadedImage);
       
-      // Analyze with OpenAI, including the prompt if provided
-      const result = await analyzeMarketingImage(base64Image, apiKey, promptText, platforms);
+      // Call the Supabase Edge Function for analysis
+      const { data: analysisData, error: analysisError } = await supabase.functions
+        .invoke('analyze-image', {
+          body: {
+            image: base64Image,
+            prompt: promptText || null,
+            platforms: platforms.length > 0 ? platforms : null
+          }
+        });
+      
+      if (analysisError) {
+        throw new Error(`Analysis failed: ${analysisError.message}`);
+      }
       
       // Convert to recommendations format
+      const result = analysisData as AnalysisResult;
       const newRecommendations = convertToRecommendations(result);
       setRecommendations(newRecommendations);
       
@@ -152,7 +142,7 @@ const AnalyzerPage = () => {
           user_id: currentUser.id,
           image_url: imageUrl,
           prompt: promptText || null,
-          result: result as AnalysisResult
+          result: result
         })
         .select();
       
@@ -352,34 +342,10 @@ const AnalyzerPage = () => {
                       </CardContent>
                     </Card>
                     
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Lock className="h-4 w-4 text-muted-foreground" />
-                          <h3 className="text-lg font-medium">Your OpenAI API Key</h3>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          Enter your OpenAI API key to analyze the image. Your key is securely stored in your browser and never sent to our servers.
-                        </p>
-                      </div>
-                      
-                      <Input
-                        type="password"
-                        placeholder="sk-..."
-                        value={apiKey}
-                        onChange={handleApiKeyChange}
-                        className="font-mono"
-                      />
-                      
-                      <div className="text-xs text-muted-foreground">
-                        <p>Don't have an API key? <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Get one from OpenAI</a></p>
-                      </div>
-                    </div>
-                    
                     <div className="flex justify-center">
                       <Button 
                         onClick={handleAnalyzeImage}
-                        disabled={!uploadedImage || !apiKey || isAnalyzing || !currentUser}
+                        disabled={!uploadedImage || isAnalyzing || !currentUser}
                         className="px-6 gap-2"
                       >
                         {isAnalyzing ? 'Analyzing...' : 'Analyze Image'} <ArrowRight className="h-4 w-4" />

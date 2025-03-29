@@ -1,3 +1,4 @@
+
 import { SocialMediaPlatform } from "@/components/SocialMediaBadge";
 
 export interface AnalysisResult {
