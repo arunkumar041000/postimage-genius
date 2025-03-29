@@ -15,6 +15,7 @@ serve(async (req) => {
 
   try {
     const { imageBase64, prompt, platforms } = await req.json();
+    console.log(JSON.stringify({ imageBase64, prompt, platforms }));
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
     if (!openAIApiKey) {

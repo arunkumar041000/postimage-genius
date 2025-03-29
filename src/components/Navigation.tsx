@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { currentUser, signOut } = useAuth();
+  const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
 
   const toggleMenu = () => {
@@ -17,7 +17,7 @@ const Navigation = () => {
 
   const handleLogout = async () => {
     try {
-      await signOut();
+      await logout();
       navigate('/login');
     } catch (error) {
       console.error('Failed to sign out:', error);
