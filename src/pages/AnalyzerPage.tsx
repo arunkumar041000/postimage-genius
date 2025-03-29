@@ -17,12 +17,14 @@ import { analyzeMarketingImage } from '@/lib/openai';
 import { AnalysisResult } from '@/types/analysis';
 import { Recommendation } from '@/components/RecommendationCard';
 import { ArrowRight, Lock, Sparkles, MessageSquare } from 'lucide-react';
+import { SocialMediaPlatform } from '@/components/SocialMediaBadge';
 
 const STORAGE_KEY = 'marketing_analyzer_api_key';
 
 const AnalyzerPage = () => {
   const { currentUser } = useAuth();
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
+  const [platforms, setPlatforms] = useState<SocialMediaPlatform[]>([]);
   const [apiKey, setApiKey] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,8 +79,9 @@ const AnalyzerPage = () => {
     }
   };
 
-  const handleImageUpload = (file: File) => {
+  const handleImageUpload = (file: File, platforms: SocialMediaPlatform[]) => {
     setUploadedImage(file);
+    setPlatforms(platforms);
     setError(null);
     setRecommendations(null);
     // Reset current history item when uploading a new image
@@ -121,6 +124,7 @@ const AnalyzerPage = () => {
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('analysis_images')
         .upload(fileName, uploadedImage);
+
       
       if (uploadError) {
         throw new Error(`Failed to upload image: ${uploadError.message}`);
@@ -135,7 +139,7 @@ const AnalyzerPage = () => {
       const base64Image = await resizeImageIfNeeded(uploadedImage);
       
       // Analyze with OpenAI, including the prompt if provided
-      const result = await analyzeMarketingImage(base64Image, apiKey, promptText);
+      const result = await analyzeMarketingImage(base64Image, apiKey, promptText, platforms);
       
       // Convert to recommendations format
       const newRecommendations = convertToRecommendations(result);

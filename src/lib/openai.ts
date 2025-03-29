@@ -1,3 +1,4 @@
+import { SocialMediaPlatform } from "@/components/SocialMediaBadge";
 
 export interface AnalysisResult {
   positives: string[];
@@ -8,7 +9,8 @@ export interface AnalysisResult {
 export const analyzeMarketingImage = async (
   imageBase64: string,
   apiKey: string,
-  prompt?: string
+  prompt?: string,
+  platforms?: SocialMediaPlatform[]
 ): Promise<AnalysisResult> => {
   // Prepare the API request
   const headers = {
@@ -26,14 +28,13 @@ export const analyzeMarketingImage = async (
     Focus on visual elements, composition, target audience appeal, brand consistency, 
     messaging clarity, call-to-action effectiveness, and emotional impact.`;
 
+  if (platforms && platforms.length > 0) {
+    systemContent += `\n\nTarget platforms: ${platforms.join(', ')}`;
+    systemContent += `\n\nPay special attention to optimizing this content for the specified target platforms,
+    including platform-specific best practices, aspect ratios, and content guidelines.`;
+  }
   if (prompt && prompt.trim()) {
     systemContent += `\n\nAdditional context from the user: ${prompt.trim()}`;
-    
-    // Extract platform information if present
-    if (prompt.includes('Target platforms:')) {
-      systemContent += `\n\nPay special attention to optimizing this content for the specified target platforms,
-      including platform-specific best practices, aspect ratios, and content guidelines.`;
-    }
   }
 
   const payload = {
