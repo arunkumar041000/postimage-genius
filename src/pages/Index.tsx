@@ -10,16 +10,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { resizeImageIfNeeded } from '@/lib/imageProcessor';
-import { analyzeMarketingImage, AnalysisResult } from '@/lib/openai';
+import { AnalysisResult } from '@/types/analysis';
 import { Recommendation } from '@/components/RecommendationCard';
 import { ArrowRight, Lock, Sparkles, MessageSquare } from 'lucide-react';
 import { SocialMediaPlatform } from '@/components/SocialMediaBadge';
-
-const STORAGE_KEY = 'marketing_analyzer_api_key';
+import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
-  const [apiKey, setApiKey] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [recommendations, setRecommendations] = useState<Recommendation[] | null>(null);
@@ -27,30 +26,15 @@ const Index = () => {
   const [promptText, setPromptText] = useState<string>('');
   const [selectedPlatforms, setSelectedPlatforms] = useState<SocialMediaPlatform[]>([]);
 
-  // Load API key from localStorage on component mount
-  useEffect(() => {
-    const savedApiKey = localStorage.getItem(STORAGE_KEY);
-    if (savedApiKey) {
-      setApiKey(savedApiKey);
-    }
-  }, []);
-
   const handleImageUpload = (file: File, platforms: SocialMediaPlatform[]) => {
     setUploadedImage(file);
     setSelectedPlatforms(platforms);
     setError(null);
     setRecommendations(null);
-    // Switch to API key tab if image is uploaded and we don't have recommendations yet
+    // Switch to prompt tab if image is uploaded and we don't have recommendations yet
     if (!recommendations && activeTab === 'upload') {
       setActiveTab('apikey');
     }
-  };
-
-  const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newApiKey = e.target.value;
-    setApiKey(newApiKey);
-    // Save to localStorage whenever it changes
-    localStorage.setItem(STORAGE_KEY, newApiKey);
   };
 
   const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -63,11 +47,6 @@ const Index = () => {
       return;
     }
 
-    if (!apiKey || apiKey.trim() === '') {
-      toast.error('Please enter your OpenAI API key');
-      return;
-    }
-
     setIsAnalyzing(true);
     setError(null);
     
@@ -75,19 +54,25 @@ const Index = () => {
       // Process and resize image if needed
       const base64Image = await resizeImageIfNeeded(uploadedImage);
       
-      // Build enhanced prompt with selected platforms
-      let enhancedPrompt = promptText || '';
-      if (selectedPlatforms.length > 0) {
-        const platformsText = selectedPlatforms.join(', ');
-        enhancedPrompt = enhancedPrompt 
-          ? `${enhancedPrompt}\n\nTarget platforms: ${platformsText}`
-          : `Target platforms: ${platformsText}`;
+      // Call the Supabase Edge Function
+      const { data, error } = await supabase.functions.invoke('analyze-image', {
+        body: {
+          imageBase64: base64Image,
+          prompt: promptText,
+          platforms: selectedPlatforms
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to analyze image');
       }
       
-      // Analyze with OpenAI
-      const result = await analyzeMarketingImage(base64Image, apiKey, enhancedPrompt);
+      if (!data) {
+        throw new Error('No analysis data returned');
+      }
       
       // Convert to recommendations format
+      const result = data as AnalysisResult;
       const newRecommendations = convertToRecommendations(result);
       setRecommendations(newRecommendations);
       
@@ -165,7 +150,7 @@ const Index = () => {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="upload">Upload Image</TabsTrigger>
-              <TabsTrigger value="apikey">API Key</TabsTrigger>
+              <TabsTrigger value="apikey">Add Context</TabsTrigger>
               <TabsTrigger value="results" disabled={!recommendations && !isAnalyzing}>
                 Analysis
               </TabsTrigger>
@@ -193,29 +178,7 @@ const Index = () => {
               <Card>
                 <CardContent className="pt-6">
                   <div className="space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Lock className="h-4 w-4 text-muted-foreground" />
-                        <h3 className="text-lg font-medium">Your OpenAI API Key</h3>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Enter your OpenAI API key to analyze the image. Your key is securely stored in your browser and never sent to our servers.
-                      </p>
-                    </div>
-                    
-                    <Input
-                      type="password"
-                      placeholder="sk-..."
-                      value={apiKey}
-                      onChange={handleApiKeyChange}
-                      className="font-mono"
-                    />
-                    
-                    <div className="text-xs text-muted-foreground">
-                      <p>Don't have an API key? <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Get one from OpenAI</a></p>
-                    </div>
-
-                    <div className="space-y-2 mt-6 pt-4 border-t">
+                    <div className="space-y-2 mt-6">
                       <div className="flex items-center gap-2">
                         <MessageSquare className="h-4 w-4 text-muted-foreground" />
                         <h3 className="text-lg font-medium">Add Context (Optional)</h3>
@@ -244,7 +207,7 @@ const Index = () => {
                 
                 <Button 
                   onClick={handleAnalyzeImage}
-                  disabled={!uploadedImage || !apiKey || isAnalyzing}
+                  disabled={!uploadedImage || isAnalyzing}
                   className="px-6"
                 >
                   {isAnalyzing ? 'Analyzing...' : 'Analyze Image'}

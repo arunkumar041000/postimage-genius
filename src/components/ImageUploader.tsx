@@ -1,9 +1,10 @@
+
 import React, { useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
-import { UploadCloud, X, Image as ImageIcon, Instagram, Twitter, Facebook } from 'lucide-react';
+import { UploadCloud, X, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import SocialMediaBadge, { SocialMediaPlatform } from './SocialMediaBadge';
-import { Badge } from './ui/badge';
 
 const SOCIAL_MEDIA_PLATFORMS: SocialMediaPlatform[] = ["facebook", "instagram", "twitter"];
 
@@ -64,7 +65,8 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
     onImageUpload(file, selectedPlatforms);
   };
 
-  const clearImage = () => {
+  const clearImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setPreviewUrl(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -162,10 +164,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
               size="icon"
               variant="secondary"
               className="rounded-full w-8 h-8 bg-background/80 backdrop-blur-sm border shadow-sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                clearImage();
-              }}
+              onClick={clearImage}
             >
               <X className="h-4 w-4" />
             </Button>
@@ -179,7 +178,6 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
                 isSelected={true}
               />
             ))}
-
           </div>
         </div>
       )}
