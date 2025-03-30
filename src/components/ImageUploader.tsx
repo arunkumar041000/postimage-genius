@@ -131,8 +131,8 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
               onChange={handleFileChange}
               className="hidden"
             />
-            
-            {/* Platform selection moved below upload area */}
+
+            {/* Platform selection moved directly below the upload button */}
             <div className="mt-6 pt-4 border-t w-full">
               <p className="text-sm font-medium mb-3 text-center">Select target platforms for better analysis</p>
               <div className="flex flex-wrap gap-2 justify-center">
