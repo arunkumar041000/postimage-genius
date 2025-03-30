@@ -13,13 +13,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SidebarProvider } from '@/components/ui/sidebar';
-import { resizeImageIfNeeded } from '@/lib/imageProcessor';
 import { AnalysisResult } from '@/types/analysis';
 import { Recommendation } from '@/components/RecommendationCard';
 import { ArrowRight, Sparkles, MessageSquare } from 'lucide-react';
 import { SocialMediaPlatform } from '@/components/SocialMediaBadge';
 
-// Remove the STORAGE_KEY constant as we no longer need to store the API key
 const AnalyzerPage = () => {
   const { currentUser } = useAuth();
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
@@ -32,6 +30,7 @@ const AnalyzerPage = () => {
   const [historyItems, setHistoryItems] = useState<AnalysisHistoryItem[]>([]);
   const [currentHistoryItemId, setCurrentHistoryItemId] = useState<string | undefined>(undefined);
   const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(false);
+  const [imagePublicUrl, setImagePublicUrl] = useState<string | null>(null);
 
   // Load history from Supabase when user is authenticated
   useEffect(() => {
@@ -74,6 +73,7 @@ const AnalyzerPage = () => {
     setPlatforms(platforms);
     setError(null);
     setRecommendations(null);
+    setImagePublicUrl(null);
     // Reset current history item when uploading a new image
     setCurrentHistoryItemId(undefined);
   };
@@ -97,8 +97,22 @@ const AnalyzerPage = () => {
     setError(null);
     
     try {
+      // Create a storage bucket first if it doesn't exist
+      const { data: bucketData, error: bucketError } = await supabase
+        .storage
+        .getBucket('analysis_images');
+
+      if (bucketError && bucketError.message.includes('not found')) {
+        await supabase
+          .storage
+          .createBucket('analysis_images', {
+            public: true,
+            fileSizeLimit: 5242880 // 5MB
+          });
+      }
+      
       // Upload image to Supabase Storage
-      const fileName = `${Date.now()}_${uploadedImage.name}`;
+      const fileName = `${Date.now()}_${uploadedImage.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('analysis_images')
         .upload(fileName, uploadedImage);
@@ -109,18 +123,18 @@ const AnalyzerPage = () => {
       }
       
       // Get the public URL for the uploaded image
-      const imageUrl = supabase.storage
+      const { data: urlData } = supabase.storage
         .from('analysis_images')
-        .getPublicUrl(fileName).data.publicUrl;
+        .getPublicUrl(fileName);
       
-      // Process and resize image if needed for analysis
-      const base64Image = await resizeImageIfNeeded(uploadedImage);
+      const imageUrl = urlData.publicUrl;
+      setImagePublicUrl(imageUrl);
       
       // Call the Supabase Edge Function for analysis
       const { data: analysisData, error: analysisError } = await supabase.functions
         .invoke('analyze-image', {
           body: {
-            image: base64Image,
+            imageUrl: imageUrl,
             prompt: promptText || null,
             platforms: platforms.length > 0 ? platforms : null
           }

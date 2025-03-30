@@ -14,8 +14,15 @@ serve(async (req) => {
   }
 
   try {
-    const { imageBase64, prompt, platforms } = await req.json();
-    console.log(JSON.stringify({ imageBase64, prompt, platforms }));
+    const { imageUrl, prompt, platforms } = await req.json();
+    
+    if (!imageUrl) {
+      return new Response(
+        JSON.stringify({ error: 'Image URL is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
     if (!openAIApiKey) {
@@ -65,7 +72,7 @@ serve(async (req) => {
             {
               type: "image_url",
               image_url: {
-                url: `data:image/jpeg;base64,${imageBase64}`
+                url: imageUrl
               }
             }
           ]

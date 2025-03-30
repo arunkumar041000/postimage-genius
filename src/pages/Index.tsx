@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { resizeImageIfNeeded } from '@/lib/imageProcessor';
 import { AnalysisResult } from '@/types/analysis';
 import { Recommendation } from '@/components/RecommendationCard';
 import { ArrowRight, Lock, Sparkles, MessageSquare } from 'lucide-react';
@@ -25,12 +24,14 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState<string>('upload');
   const [promptText, setPromptText] = useState<string>('');
   const [selectedPlatforms, setSelectedPlatforms] = useState<SocialMediaPlatform[]>([]);
+  const [imagePublicUrl, setImagePublicUrl] = useState<string | null>(null);
 
   const handleImageUpload = (file: File, platforms: SocialMediaPlatform[]) => {
     setUploadedImage(file);
     setSelectedPlatforms(platforms);
     setError(null);
     setRecommendations(null);
+    setImagePublicUrl(null);
     // Switch to prompt tab if image is uploaded and we don't have recommendations yet
     if (!recommendations && activeTab === 'upload') {
       setActiveTab('apikey');
@@ -51,13 +52,43 @@ const Index = () => {
     setError(null);
     
     try {
-      // Process and resize image if needed
-      const base64Image = await resizeImageIfNeeded(uploadedImage);
+      // Upload image to Supabase Storage if not already uploaded
+      if (!imagePublicUrl) {
+        // Create a storage bucket first if it doesn't exist
+        const { data: bucketData, error: bucketError } = await supabase
+          .storage
+          .getBucket('analysis_images');
+
+        if (bucketError && bucketError.message.includes('not found')) {
+          await supabase
+            .storage
+            .createBucket('analysis_images', {
+              public: true,
+              fileSizeLimit: 5242880 // 5MB
+            });
+        }
+
+        const fileName = `${Date.now()}_${uploadedImage.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('analysis_images')
+          .upload(fileName, uploadedImage);
+
+        if (uploadError) {
+          throw new Error(`Failed to upload image: ${uploadError.message}`);
+        }
+        
+        // Get the public URL
+        const { data } = supabase.storage
+          .from('analysis_images')
+          .getPublicUrl(fileName);
+        
+        setImagePublicUrl(data.publicUrl);
+      }
       
-      // Call the Supabase Edge Function
+      // Call the Supabase Edge Function with the image URL
       const { data, error } = await supabase.functions.invoke('analyze-image', {
         body: {
-          imageBase64: base64Image,
+          imageUrl: imagePublicUrl,
           prompt: promptText,
           platforms: selectedPlatforms
         }
@@ -80,8 +111,6 @@ const Index = () => {
       setActiveTab('results');
       toast.success('Analysis complete!');
 
-      // Ideally, here we would save to Supabase after integration
-      // saveAnalysisToSupabase(uploadedImage, promptText, newRecommendations);
     } catch (err) {
       console.error('Analysis error:', err);
       setError(err instanceof Error ? err.message : 'Failed to analyze image');

@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { UploadCloud, X, Image as ImageIcon } from 'lucide-react';
@@ -130,6 +131,26 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
               onChange={handleFileChange}
               className="hidden"
             />
+            
+            {/* Platform selection moved below upload area */}
+            <div className="mt-6 pt-4 border-t w-full">
+              <p className="text-sm font-medium mb-3 text-center">Select target platforms for better analysis</p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {
+                  SOCIAL_MEDIA_PLATFORMS.map((platform) => (
+                    <SocialMediaBadge
+                      key={platform}
+                      platform={platform}
+                      isSelected={selectedPlatforms.includes(platform)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        togglePlatform(platform);
+                      }}
+                    />
+                  ))
+                }
+              </div>
+            </div>
           </div>
         ) : (
           <div className="relative rounded-lg overflow-hidden animate-fade-in shadow-elevated">
@@ -150,25 +171,6 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
             </div>
           </div>
         )}
-      </div>
-
-      <div className="mt-6 pt-4 border-t w-full">
-        <p className="text-sm font-medium mb-3 text-center">Select target platforms for better analysis</p>
-        <div className="flex flex-wrap gap-2 justify-center">
-          {
-            SOCIAL_MEDIA_PLATFORMS.map((platform) => (
-              <SocialMediaBadge
-                key={platform}
-                platform={platform}
-                isSelected={selectedPlatforms.includes(platform)}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  togglePlatform(platform);
-                }}
-              />
-            ))
-          }
-        </div>
       </div>
     </div>
   );
