@@ -45,6 +45,7 @@ export function useImageAnalysis() {
     setError(null);
     
     try {
+      /*
       // Create a storage bucket first if it doesn't exist
       const { data: bucketData, error: bucketError } = await supabase
         .storage
@@ -58,7 +59,7 @@ export function useImageAnalysis() {
             fileSizeLimit: 5242880 // 5MB
           });
       }
-      
+      */
       // Upload image to Supabase Storage
       const fileName = `${Date.now()}_${uploadedImage.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
