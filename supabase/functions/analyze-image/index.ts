@@ -1,52 +1,10 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-// Fetch with timeout helper function
-async function fetchWithTimeout(url, options = {}, timeout = 60000) {
-  const controller = new AbortController();
-  const { signal } = controller;
-  
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
-  
-  try {
-    const response = await fetch(url, { ...options, signal });
-    clearTimeout(timeoutId);
-    return response;
-  } catch (error) {
-    clearTimeout(timeoutId);
-    throw error;
-  }
-}
-
-// Convert image to base64 data URL
-async function imageUrlToBase64(imageUrl, timeout = 30000) {
-  try {
-    console.log(`Downloading image from: ${imageUrl}`);
-    const response = await fetchWithTimeout(imageUrl, {}, timeout);
-    
-    if (!response.ok) {
-      throw new Error(`Image fetch failed with status: ${response.status}`);
-    }
-    
-    const contentType = response.headers.get('content-type');
-    const arrayBuffer = await response.arrayBuffer();
-    const bytes = new Uint8Array(arrayBuffer);
-    const base64 = btoa(String.fromCharCode(...bytes));
-    
-    console.log(`Successfully converted image to base64 (${bytes.length} bytes)`);
-    return `data:${contentType};base64,${base64}`;
-  } catch (error) {
-    console.error(`Error converting image to base64: ${error.message}`);
-    throw error;
-  }
-}
+import { corsHeaders, imageUrlToBase64 } from "./utils.ts";
+import { analyzeImageWithOpenAI } from "./openai.ts";
+import { verifyAuth, checkRateLimit } from "./auth.ts";
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -55,61 +13,14 @@ serve(async (req) => {
   }
 
   try {
-    // Initialize Supabase client with admin privileges
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    
-    if (!supabaseUrl || !supabaseServiceRole) {
-      throw new Error('Supabase environment variables are not properly configured');
-    }
-    
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRole);
-    
-    // Get the user from the authorization header
+    // Get authentication token and verify the user
     const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Authorization header is required' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const { user, supabaseAdmin } = await verifyAuth(authHeader);
     
-    // Verify the token and get the user
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
+    // Check rate limit
+    await checkRateLimit(user.id, supabaseAdmin);
     
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid or expired token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    // Check rate limit (5 analyses per day)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const { count, error: countError } = await supabaseAdmin
-      .from('analysis_history')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .gte('created_at', today.toISOString());
-    
-    if (countError) {
-      throw new Error(`Failed to check rate limit: ${countError.message}`);
-    }
-    
-    if (count && count >= 5) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Daily rate limit reached', 
-          message: 'You have reached your daily limit of 5 image analyses. Please try again tomorrow.'
-        }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
+    // Parse request body
     const { imageUrl, prompt, platforms } = await req.json();
     
     if (!imageUrl) {
@@ -119,8 +30,8 @@ serve(async (req) => {
       );
     }
     
+    // Get OpenAI API key
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-
     if (!openAIApiKey) {
       return new Response(
         JSON.stringify({ error: 'OpenAI API key not configured' }),
@@ -143,81 +54,8 @@ serve(async (req) => {
       );
     }
 
-    // Build the system message based on inputs
-    let systemContent = `You are a marketing expert specialized in analyzing marketing images and social media posts. 
-      Provide specific, actionable feedback organized in three categories:
-      1. Positives: What works well in this marketing image
-      2. Improvements: Specific areas that could be improved
-      3. Suggestions: Actionable recommendations to enhance the effectiveness
-      
-      Focus on visual elements, composition, target audience appeal, brand consistency, 
-      messaging clarity, call-to-action effectiveness, and emotional impact.`;
-
-    if (platforms && platforms.length > 0) {
-      systemContent += `\n\nTarget platforms: ${platforms.join(', ')}`;
-      systemContent += `\n\nPay special attention to optimizing this content for the specified target platforms,
-      including platform-specific best practices, aspect ratios, and content guidelines.`;
-    }
-    
-    if (prompt && prompt.trim()) {
-      systemContent += `\n\nAdditional context from the user: ${prompt.trim()}`;
-    }
-
-    // Prepare OpenAI API request payload
-    const payload = {
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: systemContent
-        },
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: prompt && prompt.trim() 
-                ? "Analyze this marketing image with the context I provided." 
-                : "Analyze this marketing image and provide feedback on what works well, what could be improved, and specific suggestions."
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: imageData
-              }
-            }
-          ]
-        }
-      ],
-      max_tokens: 1000
-    };
-
-    // Call OpenAI API
-    console.log("Calling OpenAI API...");
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${openAIApiKey}`
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("OpenAI API error:", errorData);
-      throw new Error(errorData.error?.message || 'Failed to analyze image');
-    }
-
-    const data = await response.json();
-    const content = data.choices[0]?.message?.content;
-
-    if (!content) {
-      throw new Error('No analysis generated');
-    }
-
-    // Process the response
-    const result = processOpenAIResponse(content);
+    // Analyze image with OpenAI
+    const result = await analyzeImageWithOpenAI(imageData, prompt, platforms, openAIApiKey);
 
     return new Response(
       JSON.stringify(result),
@@ -226,63 +64,21 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error analyzing image:', error);
     
+    // Format specific error messages
+    if (error.message === 'Daily rate limit reached') {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Daily rate limit reached', 
+          message: 'You have reached your daily limit of 5 image analyses. Please try again tomorrow.'
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Generic error response
     return new Response(
       JSON.stringify({ error: error.message || 'An unexpected error occurred' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
-
-// Function to process OpenAI response into structured format
-function processOpenAIResponse(content: string) {
-  // Initialize result with empty arrays
-  const result = {
-    positives: [],
-    improvements: [],
-    suggestions: []
-  };
-
-  // Try to parse sections using regex
-  const positivesMatch = content.match(/(?:Positives|What works well)[:\s]*([\s\S]*?)(?=Improvements|Areas to improve|$)/i);
-  const improvementsMatch = content.match(/(?:Improvements|Areas to improve)[:\s]*([\s\S]*?)(?=Suggestions|$)/i);
-  const suggestionsMatch = content.match(/(?:Suggestions)[:\s]*([\s\S]*?)(?=$)/i);
-
-  // Extract and clean up bullet points
-  if (positivesMatch && positivesMatch[1]) {
-    result.positives = extractBulletPoints(positivesMatch[1]);
-  }
-  
-  if (improvementsMatch && improvementsMatch[1]) {
-    result.improvements = extractBulletPoints(improvementsMatch[1]);
-  }
-  
-  if (suggestionsMatch && suggestionsMatch[1]) {
-    result.suggestions = extractBulletPoints(suggestionsMatch[1]);
-  }
-
-  // If the parsing didn't work well, at least return something
-  if (result.positives.length === 0 && 
-      result.improvements.length === 0 && 
-      result.suggestions.length === 0) {
-    // Simple fallback - split content into three parts
-    const lines = content.split('\n').filter(line => line.trim());
-    const third = Math.ceil(lines.length / 3);
-    result.positives = lines.slice(0, third);
-    result.improvements = lines.slice(third, third * 2);
-    result.suggestions = lines.slice(third * 2);
-  }
-
-  return result;
-}
-
-function extractBulletPoints(text: string): string[] {
-  // Remove leading/trailing whitespace
-  const trimmed = text.trim();
-  
-  // Split by newlines and clean up
-  const lines = trimmed.split('\n')
-    .map(line => line.replace(/^[•\-*]\s*/, '').trim())
-    .filter(line => line.length > 0);
-  
-  return lines;
-}
