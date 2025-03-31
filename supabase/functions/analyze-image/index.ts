@@ -8,6 +8,46 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Fetch with timeout helper function
+async function fetchWithTimeout(url, options = {}, timeout = 60000) {
+  const controller = new AbortController();
+  const { signal } = controller;
+  
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  
+  try {
+    const response = await fetch(url, { ...options, signal });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+}
+
+// Convert image to base64 data URL
+async function imageUrlToBase64(imageUrl, timeout = 30000) {
+  try {
+    console.log(`Downloading image from: ${imageUrl}`);
+    const response = await fetchWithTimeout(imageUrl, {}, timeout);
+    
+    if (!response.ok) {
+      throw new Error(`Image fetch failed with status: ${response.status}`);
+    }
+    
+    const contentType = response.headers.get('content-type');
+    const arrayBuffer = await response.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    const base64 = btoa(String.fromCharCode(...bytes));
+    
+    console.log(`Successfully converted image to base64 (${bytes.length} bytes)`);
+    return `data:${contentType};base64,${base64}`;
+  } catch (error) {
+    console.error(`Error converting image to base64: ${error.message}`);
+    throw error;
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -88,6 +128,21 @@ serve(async (req) => {
       );
     }
 
+    // Convert the image to a base64 data URL
+    let imageData;
+    try {
+      imageData = await imageUrlToBase64(imageUrl);
+    } catch (error) {
+      console.error(`Error processing image: ${error.message}`);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Error processing image', 
+          message: `Failed to process the uploaded image: ${error.message}`
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Build the system message based on inputs
     let systemContent = `You are a marketing expert specialized in analyzing marketing images and social media posts. 
       Provide specific, actionable feedback organized in three categories:
@@ -128,7 +183,7 @@ serve(async (req) => {
             {
               type: "image_url",
               image_url: {
-                url: imageUrl
+                url: imageData
               }
             }
           ]
@@ -138,6 +193,7 @@ serve(async (req) => {
     };
 
     // Call OpenAI API
+    console.log("Calling OpenAI API...");
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -149,6 +205,7 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorData = await response.json();
+      console.error("OpenAI API error:", errorData);
       throw new Error(errorData.error?.message || 'Failed to analyze image');
     }
 

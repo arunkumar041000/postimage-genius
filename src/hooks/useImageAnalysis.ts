@@ -7,6 +7,7 @@ import { AnalysisResult } from '@/types/analysis';
 import { Recommendation } from '@/components/RecommendationCard';
 import { SocialMediaPlatform } from '@/components/SocialMediaBadge';
 import { convertToRecommendations } from '@/utils/analysisUtils';
+import { resizeImageIfNeeded } from '@/lib/imageProcessor';
 
 export function useImageAnalysis() {
   const { currentUser } = useAuth();
@@ -88,12 +89,25 @@ export function useImageAnalysis() {
     setError(null);
     
     try {
+      // Create storage bucket if it doesn't exist
+      const { data: bucketData, error: bucketError } = await supabase
+        .storage
+        .getBucket('analysis_images');
+
+      if (bucketError && bucketError.message.includes('not found')) {
+        await supabase
+          .storage
+          .createBucket('analysis_images', {
+            public: true,
+            fileSizeLimit: 10485760 // 10MB
+          });
+      }
+
       // Upload image to Supabase Storage
       const fileName = `${Date.now()}_${uploadedImage.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('analysis_images')
         .upload(fileName, uploadedImage);
-
       
       if (uploadError) {
         throw new Error(`Failed to upload image: ${uploadError.message}`);
