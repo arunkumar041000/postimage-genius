@@ -5,6 +5,7 @@ import RecommendationCard, { Recommendation } from './RecommendationCard';
 import LoadingSpinner from './LoadingSpinner';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface ImageAnalysisProps {
   recommendations: Recommendation[] | null;
@@ -19,6 +20,8 @@ const ImageAnalysis: React.FC<ImageAnalysisProps> = ({
   error,
   className,
 }) => {
+  const { theme } = useTheme();
+  
   // Group recommendations by type for better organization
   const groupedRecommendations = recommendations
     ? {
@@ -28,11 +31,14 @@ const ImageAnalysis: React.FC<ImageAnalysisProps> = ({
       }
     : null;
 
+  const headingClass = theme === 'dark' ? 'text-foreground' : 'text-foreground';
+  const loadingTextClass = theme === 'dark' ? 'text-foreground/70' : 'text-muted-foreground';
+
   if (isLoading) {
     return (
       <div className={cn('py-16 flex flex-col items-center justify-center gap-4', className)}>
         <LoadingSpinner size="lg" />
-        <p className="text-muted-foreground animate-pulse-slow">Analyzing your marketing image...</p>
+        <p className={`${loadingTextClass} animate-pulse-slow`}>Analyzing your marketing image...</p>
       </div>
     );
   }
@@ -56,7 +62,7 @@ const ImageAnalysis: React.FC<ImageAnalysisProps> = ({
       {groupedRecommendations && Object.entries(groupedRecommendations).map(([type, recs]) => (
         recs.length > 0 && (
           <div key={type} className="space-y-4">
-            <h3 className="text-lg font-medium capitalize">
+            <h3 className={`text-lg font-medium capitalize ${headingClass}`}>
               {type === 'positive' ? 'What works well' : 
                type === 'improvement' ? 'Areas to improve' : 
                'Suggestions'}

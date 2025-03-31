@@ -1,7 +1,9 @@
+
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle2, AlertCircle, Lightbulb } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export interface Recommendation {
   id: string;
@@ -14,6 +16,7 @@ interface RecommendationCardProps {
   recommendation: Recommendation;
   className?: string;
 }
+
 const parseBoldText = (text: string) => {
   return text.split(/(\*\*.*?\*\*)/).map((part, index) => {
     if (part.startsWith('**') && part.endsWith('**')) {
@@ -27,6 +30,7 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({
   recommendation,
   className 
 }) => {
+  const { theme } = useTheme();
   const { type, title, description } = recommendation;
   
   const iconMap = {
@@ -36,10 +40,12 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({
   };
   
   const backgroundMap = {
-    positive: 'bg-green-50 border-green-100',
-    improvement: 'bg-amber-50 border-amber-100',
-    suggestion: 'bg-blue-50 border-blue-100'
+    positive: theme === 'dark' ? 'bg-green-950/40 border-green-900/50' : 'bg-green-50 border-green-100',
+    improvement: theme === 'dark' ? 'bg-amber-950/40 border-amber-900/50' : 'bg-amber-50 border-amber-100',
+    suggestion: theme === 'dark' ? 'bg-blue-950/40 border-blue-900/50' : 'bg-blue-50 border-blue-100'
   };
+
+  const textColorClass = theme === 'dark' ? 'text-foreground' : 'text-foreground/80';
 
   return (
     <Card 
@@ -57,7 +63,7 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({
         </div>
       </CardHeader>
       <CardContent>
-        <CardDescription className="text-foreground/80 text-sm">
+        <CardDescription className={textColorClass + " text-sm"}>
           {parseBoldText(description)}
         </CardDescription>
       </CardContent>
