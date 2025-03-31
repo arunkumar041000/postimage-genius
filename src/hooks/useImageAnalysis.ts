@@ -89,43 +89,35 @@ export function useImageAnalysis() {
     setError(null);
     
     try {
-      // Create storage bucket if it doesn't exist
-      const { data: bucketData, error: bucketError } = await supabase
-        .storage
-        .getBucket('analysis_images');
-
-      if (bucketError && bucketError.message.includes('not found')) {
-        await supabase
-          .storage
-          .createBucket('analysis_images', {
-            public: true,
-            fileSizeLimit: 10485760 // 10MB
-          });
-      }
-
-      // Upload image to Supabase Storage
+      // Convert image to base64
+      const imageBase64 = await resizeImageIfNeeded(uploadedImage);
+      
+      // Upload image to Supabase Storage for history purposes only
       const fileName = `${Date.now()}_${uploadedImage.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('analysis_images')
         .upload(fileName, uploadedImage);
       
       if (uploadError) {
-        throw new Error(`Failed to upload image: ${uploadError.message}`);
+        console.warn(`Warning: Failed to upload image to storage, but will proceed with analysis: ${uploadError.message}`);
       }
       
-      // Get the public URL for the uploaded image
-      const { data: urlData } = supabase.storage
-        .from('analysis_images')
-        .getPublicUrl(fileName);
+      // Get the public URL for the uploaded image (for display and history purposes)
+      let imageUrl = null;
+      if (!uploadError) {
+        const { data: urlData } = supabase.storage
+          .from('analysis_images')
+          .getPublicUrl(fileName);
+        
+        imageUrl = urlData.publicUrl;
+        setImagePublicUrl(imageUrl);
+      }
       
-      const imageUrl = urlData.publicUrl;
-      setImagePublicUrl(imageUrl);
-      
-      // Call the Supabase Edge Function for analysis
+      // Call the Supabase Edge Function for analysis with the base64 image
       const { data: analysisData, error: analysisError } = await supabase.functions
         .invoke('analyze-image', {
           body: {
-            imageUrl: imageUrl,
+            imageBase64: imageBase64,
             prompt: promptText || null,
             platforms: platforms.length > 0 ? platforms : null
           }

@@ -10,50 +10,6 @@ export const corsHeaders = {
 };
 
 /**
- * Fetch with timeout helper function
- */
-export async function fetchWithTimeout(url: string, options = {}, timeout = 60000) {
-  const controller = new AbortController();
-  const { signal } = controller;
-  
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
-  
-  try {
-    const response = await fetch(url, { ...options, signal });
-    clearTimeout(timeoutId);
-    return response;
-  } catch (error) {
-    clearTimeout(timeoutId);
-    throw error;
-  }
-}
-
-/**
- * Convert image URL to base64 data URL
- */
-export async function imageUrlToBase64(imageUrl: string, timeout = 30000) {
-  try {
-    console.log(`Downloading image from: ${imageUrl}`);
-    const response = await fetchWithTimeout(imageUrl, {}, timeout);
-    
-    if (!response.ok) {
-      throw new Error(`Image fetch failed with status: ${response.status}`);
-    }
-    
-    const contentType = response.headers.get('content-type');
-    const arrayBuffer = await response.arrayBuffer();
-    const bytes = new Uint8Array(arrayBuffer);
-    const base64 = btoa(String.fromCharCode(...bytes));
-    
-    console.log(`Successfully converted image to base64 (${bytes.length} bytes)`);
-    return `data:${contentType};base64,${base64}`;
-  } catch (error) {
-    console.error(`Error converting image to base64: ${error.message}`);
-    throw error;
-  }
-}
-
-/**
  * Process OpenAI response into structured format
  */
 export function processOpenAIResponse(content: string) {

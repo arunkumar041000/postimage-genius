@@ -13,6 +13,7 @@ import { SocialMediaPlatform } from '@/components/SocialMediaBadge';
 import { AnalysisResult } from '@/types/analysis';
 import { Recommendation } from '@/components/RecommendationCard';
 import { convertToRecommendations } from '@/utils/analysisUtils';
+import { resizeImageIfNeeded } from '@/lib/imageProcessor';
 
 const Index = () => {
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
@@ -50,31 +51,16 @@ const Index = () => {
     setError(null);
     
     try {
-      // Upload image to Supabase Storage if not already uploaded
-      if (!imagePublicUrl) {
-        // Create a storage bucket first if it doesn't exist
-        const { data: bucketData, error: bucketError } = await supabase
-          .storage
-          .getBucket('analysis_images');
-
-        if (bucketError && bucketError.message.includes('not found')) {
-          await supabase
-            .storage
-            .createBucket('analysis_images', {
-              public: true,
-              fileSizeLimit: 5242880 // 5MB
-            });
-        }
-
-        const fileName = `${Date.now()}_${uploadedImage.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('analysis_images')
-          .upload(fileName, uploadedImage);
-
-        if (uploadError) {
-          throw new Error(`Failed to upload image: ${uploadError.message}`);
-        }
-        
+      // Convert image to base64
+      const imageBase64 = await resizeImageIfNeeded(uploadedImage);
+      
+      // Upload to storage for display purposes only (this is optional)
+      const fileName = `${Date.now()}_${uploadedImage.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('analysis_images')
+        .upload(fileName, uploadedImage);
+      
+      if (!uploadError) {
         // Get the public URL
         const { data } = supabase.storage
           .from('analysis_images')
@@ -83,10 +69,10 @@ const Index = () => {
         setImagePublicUrl(data.publicUrl);
       }
       
-      // Call the Supabase Edge Function with the image URL
+      // Call the Supabase Edge Function with the base64 image
       const { data, error } = await supabase.functions.invoke('analyze-image', {
         body: {
-          imageUrl: imagePublicUrl,
+          imageBase64: imageBase64,
           prompt: promptText,
           platforms: selectedPlatforms
         }

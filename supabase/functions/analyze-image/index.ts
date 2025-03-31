@@ -2,7 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
-import { corsHeaders, imageUrlToBase64 } from "./utils.ts";
+import { corsHeaders } from "./utils.ts";
 import { analyzeImageWithOpenAI } from "./openai.ts";
 import { verifyAuth, checkRateLimit } from "./auth.ts";
 
@@ -21,11 +21,11 @@ serve(async (req) => {
     await checkRateLimit(user.id, supabaseAdmin);
     
     // Parse request body
-    const { imageUrl, prompt, platforms } = await req.json();
+    const { imageBase64, prompt, platforms } = await req.json();
     
-    if (!imageUrl) {
+    if (!imageBase64) {
       return new Response(
-        JSON.stringify({ error: 'Image URL is required' }),
+        JSON.stringify({ error: 'Image data is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -39,20 +39,10 @@ serve(async (req) => {
       );
     }
 
-    // Convert the image to a base64 data URL
-    let imageData;
-    try {
-      imageData = await imageUrlToBase64(imageUrl);
-    } catch (error) {
-      console.error(`Error processing image: ${error.message}`);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Error processing image', 
-          message: `Failed to process the uploaded image: ${error.message}`
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Create a data URL if the image doesn't already have the prefix
+    const imageData = imageBase64.startsWith('data:image/')
+      ? imageBase64
+      : `data:image/jpeg;base64,${imageBase64}`;
 
     // Analyze image with OpenAI
     const result = await analyzeImageWithOpenAI(imageData, prompt, platforms, openAIApiKey);
