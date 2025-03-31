@@ -3,8 +3,9 @@ import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, MessageSquare } from 'lucide-react';
+import { ArrowRight, MessageSquare, Info } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import ImageUploader from '@/components/ImageUploader';
 import ImageAnalysis from '@/components/ImageAnalysis';
@@ -12,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { AnalysisHistoryItem } from '@/components/AnalyzerSidebar';
 import { SocialMediaPlatform } from '@/components/SocialMediaBadge';
 import { Recommendation } from '@/components/RecommendationCard';
+import { Badge } from '@/components/ui/badge';
 
 interface AnalyzerContentProps {
   uploadedImage: File | null;
@@ -25,6 +27,7 @@ interface AnalyzerContentProps {
   handleAnalyzeImage: () => void;
   resetAnalysis: () => void;
   currentUser: any;
+  remainingAnalyses?: number;
 }
 
 const AnalyzerContent: React.FC<AnalyzerContentProps> = ({
@@ -38,7 +41,8 @@ const AnalyzerContent: React.FC<AnalyzerContentProps> = ({
   handlePromptChange,
   handleAnalyzeImage,
   resetAnalysis,
-  currentUser
+  currentUser,
+  remainingAnalyses = 5
 }) => {
   const [activeTab, setActiveTab] = useState<string>('upload');
 
@@ -56,6 +60,25 @@ const AnalyzerContent: React.FC<AnalyzerContentProps> = ({
           <TabsContent value="upload" className="space-y-6 animate-fade-in">
             <Card>
               <CardContent className="pt-6">
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="text-lg font-medium">Upload Marketing Image</h3>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center">
+                          <Badge variant={remainingAnalyses > 0 ? "outline" : "destructive"} className="flex gap-1 items-center">
+                            <Info className="h-3.5 w-3.5" />
+                            {remainingAnalyses} / 5 analyses remaining today
+                          </Badge>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>You can analyze up to 5 images per day</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                
                 <ImageUploader onImageUpload={handleImageUpload} />
                 
                 {uploadedImage && (
@@ -81,7 +104,7 @@ const AnalyzerContent: React.FC<AnalyzerContentProps> = ({
             <div className="flex justify-center">
               <Button 
                 onClick={handleAnalyzeImage}
-                disabled={!uploadedImage || isAnalyzing || !currentUser}
+                disabled={!uploadedImage || isAnalyzing || !currentUser || remainingAnalyses <= 0}
                 className="px-6 gap-2"
               >
                 {isAnalyzing ? 'Analyzing...' : 'Analyze Image'} <ArrowRight className="h-4 w-4" />
@@ -91,6 +114,12 @@ const AnalyzerContent: React.FC<AnalyzerContentProps> = ({
             {!currentUser && (
               <div className="text-center text-sm text-amber-600 bg-amber-50 p-3 rounded-md">
                 You need to be logged in to save analysis history. <a href="/login" className="underline font-medium">Log in</a> or <a href="/signup" className="underline font-medium">sign up</a>.
+              </div>
+            )}
+            
+            {currentUser && remainingAnalyses <= 0 && (
+              <div className="text-center text-sm text-amber-600 bg-amber-50 p-3 rounded-md">
+                You've reached your daily limit of 5 image analyses. Please try again tomorrow.
               </div>
             )}
           </TabsContent>

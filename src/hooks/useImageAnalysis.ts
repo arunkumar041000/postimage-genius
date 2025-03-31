@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,6 +17,43 @@ export function useImageAnalysis() {
   const [recommendations, setRecommendations] = useState<Recommendation[] | null>(null);
   const [promptText, setPromptText] = useState<string>('');
   const [imagePublicUrl, setImagePublicUrl] = useState<string | null>(null);
+  const [remainingAnalyses, setRemainingAnalyses] = useState<number>(5);
+
+  // Fetch the remaining analyses count when the user changes
+  useEffect(() => {
+    if (currentUser) {
+      fetchRemainingAnalyses();
+    }
+  }, [currentUser]);
+
+  const fetchRemainingAnalyses = async () => {
+    if (!currentUser) return;
+    
+    try {
+      // Get today's date at 00:00:00
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Count analyses done today
+      const { count, error } = await supabase
+        .from('analysis_history')
+        .select('*', { count: 'exact', head: false })
+        .eq('user_id', currentUser.id)
+        .gte('created_at', today.toISOString());
+      
+      if (error) {
+        console.error('Error fetching analyses count:', error);
+        return;
+      }
+      
+      // Calculate remaining analyses (max 5 per day)
+      const used = count || 0;
+      const remaining = Math.max(0, 5 - used);
+      setRemainingAnalyses(remaining);
+    } catch (err) {
+      console.error('Error calculating remaining analyses:', err);
+    }
+  };
 
   const handleImageUpload = (file: File, platforms: SocialMediaPlatform[]) => {
     setUploadedImage(file);
@@ -41,25 +78,16 @@ export function useImageAnalysis() {
       return;
     }
 
+    // Check if the user has reached their daily limit
+    if (remainingAnalyses <= 0) {
+      toast.error('You have reached your daily limit of 5 image analyses. Please try again tomorrow.');
+      return;
+    }
+
     setIsAnalyzing(true);
     setError(null);
     
     try {
-      /*
-      // Create a storage bucket first if it doesn't exist
-      const { data: bucketData, error: bucketError } = await supabase
-        .storage
-        .getBucket('analysis_images');
-
-      if (bucketError && bucketError.message.includes('not found')) {
-        await supabase
-          .storage
-          .createBucket('analysis_images', {
-            public: true,
-            fileSizeLimit: 5242880 // 5MB
-          });
-      }
-      */
       // Upload image to Supabase Storage
       const fileName = `${Date.now()}_${uploadedImage.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
@@ -116,6 +144,8 @@ export function useImageAnalysis() {
         setCurrentHistoryItemId(historyData[0].id);
         // Refresh history
         fetchAnalysisHistory();
+        // Update remaining analyses count
+        fetchRemainingAnalyses();
         toast.success('Analysis complete and saved!');
       }
       
@@ -145,12 +175,14 @@ export function useImageAnalysis() {
     recommendations,
     promptText,
     imagePublicUrl,
+    remainingAnalyses,
     handleImageUpload,
     handlePromptChange,
     handleAnalyzeImage,
     resetAnalysis,
     setPromptText,
     setRecommendations,
-    setUploadedImage
+    setUploadedImage,
+    fetchRemainingAnalyses
   };
 }

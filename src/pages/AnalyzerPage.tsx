@@ -32,6 +32,7 @@ const AnalyzerPage = () => {
     error,
     recommendations,
     promptText,
+    remainingAnalyses,
     handleImageUpload,
     handlePromptChange,
     handleAnalyzeImage: analyzeImage,
@@ -116,6 +117,7 @@ const AnalyzerPage = () => {
               handleAnalyzeImage={handleAnalyzeImage}
               resetAnalysis={resetAnalysis}
               currentUser={currentUser}
+              remainingAnalyses={remainingAnalyses}
             />
           </div>
         </div>

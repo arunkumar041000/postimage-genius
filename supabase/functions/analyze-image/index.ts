@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,6 +15,61 @@ serve(async (req) => {
   }
 
   try {
+    // Initialize Supabase client with admin privileges
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseServiceRole) {
+      throw new Error('Supabase environment variables are not properly configured');
+    }
+    
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRole);
+    
+    // Get the user from the authorization header
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Authorization header is required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Verify the token and get the user
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+    
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid or expired token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Check rate limit (5 analyses per day)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const { count, error: countError } = await supabaseAdmin
+      .from('analysis_history')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('created_at', today.toISOString());
+    
+    if (countError) {
+      throw new Error(`Failed to check rate limit: ${countError.message}`);
+    }
+    
+    if (count && count >= 5) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Daily rate limit reached', 
+          message: 'You have reached your daily limit of 5 image analyses. Please try again tomorrow.'
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     const { imageUrl, prompt, platforms } = await req.json();
     
     if (!imageUrl) {
