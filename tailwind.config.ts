@@ -111,6 +111,20 @@ export default {
 				float: {
 					'0%, 100%': { transform: 'translateY(0)' },
 					'50%': { transform: 'translateY(-5px)' },
+				},
+				blob: {
+					'0%': {
+						transform: 'translate(0px, 0px) scale(1)'
+					},
+					'33%': {
+						transform: 'translate(30px, -50px) scale(1.1)'
+					},
+					'66%': {
+						transform: 'translate(-20px, 20px) scale(0.9)'
+					},
+					'100%': {
+						transform: 'translate(0px, 0px) scale(1)'
+					}
 				}
 			},
 			animation: {
@@ -122,7 +136,8 @@ export default {
 				'slide-down': 'slide-down 0.4s ease-out',
 				'spin-slow': 'spin-slow 3s linear infinite',
 				'pulse-slow': 'pulse 3s ease-in-out infinite',
-				'float': 'float 3s ease-in-out infinite'
+				'float': 'float 3s ease-in-out infinite',
+				'blob': 'blob 7s infinite',
 			},
 			fontFamily: {
 				sans: ['Inter var', 'Inter', 'system-ui', 'sans-serif'],
@@ -136,7 +151,24 @@ export default {
 			backdropBlur: {
 				xs: '2px',
 			},
+			transitionDelay: {
+				'2000': '2000ms',
+				'4000': '4000ms',
+			},
 		}
 	},
-	plugins: [require("tailwindcss-animate")],
+	plugins: [
+		require("tailwindcss-animate"),
+		function({ addUtilities, theme }: any) {
+			const newUtilities = {
+				'.animation-delay-2000': {
+					'animation-delay': '2s',
+				},
+				'.animation-delay-4000': {
+					'animation-delay': '4s',
+				},
+			}
+			addUtilities(newUtilities)
+		}
+	],
 } satisfies Config;
