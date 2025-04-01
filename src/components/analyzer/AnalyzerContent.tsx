@@ -127,14 +127,14 @@ const AnalyzerContent: React.FC<AnalyzerContentProps> = ({
           
           <TabsContent value="results" className="space-y-8 animate-fade-in">
             {uploadedImage && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="flex flex-col gap-8">
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium">Your Image</h3>
                   <div className="rounded-lg overflow-hidden border bg-card">
                     <img 
                       src={URL.createObjectURL(uploadedImage)} 
                       alt="Uploaded marketing image" 
-                      className="w-full h-auto object-contain"
+                      className="w-full h-auto object-contain max-h-[400px] mx-auto"
                     />
                   </div>
                   {promptText && (

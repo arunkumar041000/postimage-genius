@@ -31,32 +31,30 @@ const ResultsTab = ({
     <div className="space-y-8 animate-fade-in">
       {uploadedImage && (
         <div className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Your Image</h3>
-              <div className="rounded-lg overflow-hidden border bg-card shadow-sm">
-                <img 
-                  src={URL.createObjectURL(uploadedImage)} 
-                  alt="Uploaded marketing image" 
-                  className="w-full h-auto max-h-[300px] object-contain"
-                />
-              </div>
-              
-              <div className="flex flex-wrap gap-2 mt-2">
-                {selectedPlatforms.map(platform => (
-                  <Badge key={platform} variant="secondary" className="text-xs">
-                    {platform.charAt(0).toUpperCase() + platform.slice(1)}
-                  </Badge>
-                ))}
-              </div>
-              
-              {promptText && (
-                <div className="text-sm text-muted-foreground p-3 bg-muted rounded-lg">
-                  <p className="font-medium mb-1">Your context:</p>
-                  <p>{promptText}</p>
-                </div>
-              )}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Your Image</h3>
+            <div className="rounded-lg overflow-hidden border bg-card shadow-sm">
+              <img 
+                src={URL.createObjectURL(uploadedImage)} 
+                alt="Uploaded marketing image" 
+                className="w-full h-auto max-h-[400px] object-contain"
+              />
             </div>
+            
+            <div className="flex flex-wrap gap-2 mt-2">
+              {selectedPlatforms.map(platform => (
+                <Badge key={platform} variant="secondary" className="text-xs">
+                  {platform.charAt(0).toUpperCase() + platform.slice(1)}
+                </Badge>
+              ))}
+            </div>
+            
+            {promptText && (
+              <div className="text-sm text-muted-foreground p-3 bg-muted rounded-lg">
+                <p className="font-medium mb-1">Your context:</p>
+                <p>{promptText}</p>
+              </div>
+            )}
           </div>
           
           <div className="space-y-4 mt-6">
