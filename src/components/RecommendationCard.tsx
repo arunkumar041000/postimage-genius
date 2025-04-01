@@ -53,6 +53,7 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({
         'transform transition-all duration-300 ease-in-out', 
         'hover:shadow-elevated hover:-translate-y-1',
         backgroundMap[type],
+        'h-full', // Add height to fill carousel item
         className
       )}
     >

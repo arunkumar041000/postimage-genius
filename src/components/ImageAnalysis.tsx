@@ -6,6 +6,13 @@ import LoadingSpinner from './LoadingSpinner';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useTheme } from '@/contexts/ThemeContext';
+import { 
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious
+} from "@/components/ui/carousel";
 
 interface ImageAnalysisProps {
   recommendations: Recommendation[] | null;
@@ -67,14 +74,19 @@ const ImageAnalysis: React.FC<ImageAnalysisProps> = ({
                type === 'improvement' ? 'Areas to improve' : 
                'Suggestions'}
             </h3>
-            <div className="grid grid-cols-1 gap-4">
-              {recs.map(recommendation => (
-                <RecommendationCard 
-                  key={recommendation.id} 
-                  recommendation={recommendation} 
-                />
-              ))}
-            </div>
+            <Carousel className="w-full">
+              <CarouselContent>
+                {recs.map(recommendation => (
+                  <CarouselItem key={recommendation.id} className="md:basis-4/5 lg:basis-3/4">
+                    <RecommendationCard recommendation={recommendation} />
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <div className="flex items-center justify-center mt-3">
+                <CarouselPrevious className="static mx-2 translate-y-0" />
+                <CarouselNext className="static mx-2 translate-y-0" />
+              </div>
+            </Carousel>
           </div>
         )
       ))}
