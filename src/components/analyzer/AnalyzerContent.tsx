@@ -26,8 +26,9 @@ interface AnalyzerContentProps {
   handlePromptChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   handleAnalyzeImage: () => void;
   resetAnalysis: () => void;
-  currentUser: any;
   remainingAnalyses?: number;
+  activeTab:string;
+  setActiveTab: (tab:string) => void;
 }
 
 const AnalyzerContent: React.FC<AnalyzerContentProps> = ({
@@ -41,10 +42,10 @@ const AnalyzerContent: React.FC<AnalyzerContentProps> = ({
   handlePromptChange,
   handleAnalyzeImage,
   resetAnalysis,
-  currentUser,
-  remainingAnalyses = 5
+  remainingAnalyses = 5,
+  activeTab, setActiveTab
 }) => {
-  const [activeTab, setActiveTab] = useState<string>('upload');
+  const { currentUser } = useAuth();
 
   return (
     <main className="container flex-1">

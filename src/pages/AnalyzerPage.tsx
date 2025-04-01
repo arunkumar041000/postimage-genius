@@ -116,8 +116,9 @@ const AnalyzerPage = () => {
               handlePromptChange={handlePromptChange}
               handleAnalyzeImage={handleAnalyzeImage}
               resetAnalysis={resetAnalysis}
-              currentUser={currentUser}
               remainingAnalyses={remainingAnalyses}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
             />
           </div>
         </div>
