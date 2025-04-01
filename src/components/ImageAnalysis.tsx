@@ -75,9 +75,9 @@ const ImageAnalysis: React.FC<ImageAnalysisProps> = ({
                'Suggestions'}
             </h3>
             <Carousel className="w-full">
-              <CarouselContent>
+              <CarouselContent className="flex flex-nowrap gap-4">
                 {recs.map(recommendation => (
-                  <CarouselItem key={recommendation.id} className="md:basis-4/5 lg:basis-3/4">
+                  <CarouselItem key={recommendation.id} className="basis-full md:basis-1/2 lg:basis-1/3 min-w-0 flex-shrink-0">
                     <RecommendationCard recommendation={recommendation} />
                   </CarouselItem>
                 ))}
