@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -151,8 +150,9 @@ const Home = () => {
               <h3 className="text-xl font-semibold">AI Analysis Begins</h3>
               <p className="text-muted-foreground">Our AI examines text, color, emotion, and overall clarity</p>
               
-              {/* Connector line - only visible on desktop */}
-              <div className="hidden md:block absolute left-[-50%] top-[30px] w-full border-t-2 border-dashed border-primary/20"></div>
+              {/* Connector lines - only visible on desktop */}
+              <div className="hidden md:block absolute left-[-50%] top-[30px] w-full h-0.5 border-t-2 border-dashed border-primary/20"></div>
+              <div className="hidden md:block absolute right-[-50%] top-[30px] w-full h-0.5 border-t-2 border-dashed border-primary/20"></div>
             </div>
             
             <div className="flex flex-col items-center text-center space-y-4 relative">
@@ -161,9 +161,6 @@ const Home = () => {
               </div>
               <h3 className="text-xl font-semibold">View Insights & Improve</h3>
               <p className="text-muted-foreground">Get actionable tips and enhancement suggestions</p>
-              
-              {/* Connector line - only visible on desktop */}
-              <div className="hidden md:block absolute left-[-50%] top-[30px] w-full border-t-2 border-dashed border-primary/20"></div>
             </div>
           </div>
         </div>
